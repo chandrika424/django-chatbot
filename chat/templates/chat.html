@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PyBot Chatbot</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+        }
+
+        .chat-container {
+            width: 500px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        #chat-box {
+            height: 350px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .user-message {
+            text-align: right;
+            margin: 10px;
+        }
+
+        .bot-message {
+            text-align: left;
+            margin: 10px;
+        }
+
+        #message {
+            width: 70%;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 25%;
+            padding: 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="chat-container">
+
+    <h2>🤖 PyBot</h2>
+
+    <div id="chat-box">
+        <div class="bot-message">
+            <b>Bot:</b> Hello! Ask me something.
+        </div>
+    </div>
+
+    <input
+        type="text"
+        id="message"
+        placeholder="Type your message..."
+        onkeydown="handleKey(event)"
+    >
+
+    <button onclick="sendMessage()">Send</button>
+
+</div>
+
+
+<script>
+
+function handleKey(event) {
+    if (event.key === "Enter") {
+        sendMessage();
+    }
+}
+
+
+function sendMessage() {
+
+    const input = document.getElementById("message");
+    const chatBox = document.getElementById("chat-box");
+
+    const message = input.value.trim();
+
+    if (message === "") {
+        return;
+    }
+
+    // Display user message
+    chatBox.innerHTML += `
+        <div class="user-message">
+            <b>You:</b> ${message}
+        </div>
+    `;
+
+    input.value = "";
+
+    // Send message to Django
+    fetch("/api/chat/", {
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": getCookie("csrftoken")
+        },
+
+        body: new URLSearchParams({
+            message: message
+        })
+    })
+
+    .then(response => {
+
+        if (!response.ok) {
+            throw new Error("Server error: " + response.status);
+        }
+
+        return response.json();
+    })
+
+    .then(data => {
+
+        chatBox.innerHTML += `
+            <div class="bot-message">
+                <b>Bot:</b> ${data.response}
+            </div>
+        `;
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    })
+
+    .catch(error => {
+
+        console.error("CHATBOT ERROR: ",error);
+
+        chatBox.innerHTML += `
+            <div class="bot-message">
+                <b>Bot:</b> Error: ${error.message}
+            </div>
+        `;
+    });
+}
+
+
+// Get CSRF cookie
+function getCookie(name) {
+
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== "") {
+
+        const cookies = document.cookie.split(";");
+
+        for (let cookie of cookies) {
+
+            cookie = cookie.trim();
+
+            if (cookie.startsWith(name + "=")) {
+
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
+
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
+</script>
+
+</body>
+</html>
